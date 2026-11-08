@@ -1,0 +1,66 @@
+# StoryVerse - Git ignore rules
+
+# Node / Expo
+node_modules/
+.expo/
+dist/
+web-build/
+.metro-health-check*
+*.tsbuildinfo
+
+# Android / native build outputs
+.gradle/
+.cxx/
+.kotlin/
+build/
+local.properties
+*.apk
+*.aab
+*.hprof
+
+# Signing credentials
+*.keystore
+*.jks
+*.p8
+*.p12
+*.pem
+*.key
+*.mobileprovision
+
+# Environment secrets
+.env
+.env.*
+!.env.example
+
+# Firebase / service credentials
+google-services.json
+GoogleService-Info.plist
+*service-account*.json
+
+# Python
+.venv/
+venv/
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.coverage
+htmlcov/
+
+# Temporary backups
+*.bak
+*.backup-*
+*.before-audio-*.bak
+
+# Logs
+*.log
+npm-debug.*
+yarn-debug.*
+yarn-error.*
+
+# Editor / OS
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
