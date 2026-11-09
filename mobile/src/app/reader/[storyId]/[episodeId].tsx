@@ -12,6 +12,7 @@ import { SafeAreaView } from "react-native-safe-area-context";
 import StoryVerseReader from "../../../components/storyverse-reader";
 import {
   fetchEpisodeReading,
+  fetchStoryDetails,
   StoryVerseApiError,
 } from "../../../features/api/storyverse-api";
 import { getStoryById } from "../../../features/stories/catalog";
@@ -20,6 +21,7 @@ type ReaderLoadState =
   | { kind: "loading" }
   | {
       kind: "ready";
+      storyTitle: string;
       title: string;
       body: string;
       source: "backend" | "local-sample";
@@ -150,23 +152,51 @@ function ReaderStatus({
   );
 }
 
+function getEpisodeNumber(
+  storySlug: string,
+  episodeId: string
+): number | null {
+  const prefix = `${storySlug}-episode-`;
+
+  if (!storySlug || !episodeId.startsWith(prefix)) {
+    return null;
+  }
+
+  const suffix = episodeId.slice(prefix.length);
+
+  if (!/^[1-9]\d*$/.test(suffix)) {
+    return null;
+  }
+
+  const number = Number(suffix);
+
+  return Number.isSafeInteger(number) ? number : null;
+}
+
 export default function StoryEpisodeReaderScreen() {
   const { storyId, episodeId } = useLocalSearchParams<{
     storyId: string;
     episodeId: string;
   }>();
 
-  const story = getStoryById(storyId);
+  const storySlug =
+    typeof storyId === "string" ? storyId : "";
 
-  const episode = story?.episodes.find(
-    (item) => item.id === episodeId
+  const episodeKey =
+    typeof episodeId === "string" ? episodeId : "";
+
+  const episodeNumber = getEpisodeNumber(
+    storySlug,
+    episodeKey
   );
 
-  const canReadLocalSample =
-    episode?.access === "free" &&
-    (episode.availability === "sample" ||
-      episode.availability === "ready") &&
-    Boolean(episode.text?.trim());
+  const previewStory = getStoryById(storySlug);
+
+  const previewEpisode = previewStory?.episodes.find(
+    (item) => item.id === episodeKey
+  );
+
+  const language = previewStory?.language ?? "en";
 
   const [state, setState] = useState<ReaderLoadState>({
     kind: "loading",
@@ -175,11 +205,10 @@ export default function StoryEpisodeReaderScreen() {
   useEffect(() => {
     let active = true;
 
-    if (!story || !episode || !canReadLocalSample) {
+    if (!storySlug || episodeNumber === null) {
       setState({
         kind: "unavailable",
-        message:
-          "This episode is not currently available for free reading.",
+        message: "Invalid story or episode.",
       });
 
       return () => {
@@ -187,33 +216,44 @@ export default function StoryEpisodeReaderScreen() {
       };
     }
 
-    const currentStory = story;
-    const currentEpisode = episode;
-
     setState({ kind: "loading" });
 
     async function loadEpisode() {
       try {
-        const response = await fetchEpisodeReading(
-          currentStory.id,
-          currentEpisode.number,
-          currentStory.language
-        );
+        const [reading, storyDetails] = await Promise.all([
+          fetchEpisodeReading(
+            storySlug,
+            episodeNumber!,
+            language
+          ),
+          fetchStoryDetails(
+            storySlug,
+            language
+          ),
+        ]);
 
         if (
-          response.episode_number !== currentEpisode.number ||
-          response.language_code !== currentStory.language ||
-          typeof response.body_text !== "string" ||
-          !response.body_text.trim()
+          reading.episode_number !== episodeNumber ||
+          reading.language_code !== language ||
+          reading.is_free !== true ||
+          typeof reading.title !== "string" ||
+          !reading.title.trim() ||
+          typeof reading.body_text !== "string" ||
+          !reading.body_text.trim() ||
+          storyDetails.slug !== storySlug ||
+          storyDetails.language_code !== language ||
+          typeof storyDetails.title !== "string" ||
+          !storyDetails.title.trim()
         ) {
-          throw new Error("Invalid episode response.");
+          throw new Error("Invalid published episode response.");
         }
 
         if (active) {
           setState({
             kind: "ready",
-            title: response.title,
-            body: response.body_text,
+            storyTitle: storyDetails.title,
+            title: reading.title,
+            body: reading.body_text,
             source: "backend",
           });
         }
@@ -222,13 +262,16 @@ export default function StoryEpisodeReaderScreen() {
           return;
         }
 
-        const accessDenied =
-          error instanceof StoryVerseApiError &&
-          error.status !== null &&
-          error.status >= 400 &&
-          error.status < 500;
+        const status =
+          error instanceof StoryVerseApiError
+            ? error.status
+            : null;
 
-        if (accessDenied) {
+        if (
+          status !== null &&
+          status >= 400 &&
+          status < 500
+        ) {
           setState({
             kind: "unavailable",
             message:
@@ -238,20 +281,38 @@ export default function StoryEpisodeReaderScreen() {
           return;
         }
 
-        if (currentEpisode.text?.trim()) {
+        const canUseLocalSample =
+          previewEpisode?.access === "free" &&
+          (previewEpisode.availability === "sample" ||
+            previewEpisode.availability === "ready") &&
+          Boolean(previewEpisode.text?.trim());
+
+        const isRecoverableApiFailure =
+          error instanceof StoryVerseApiError &&
+          (error.status === null || error.status >= 500);
+
+        if (
+          isRecoverableApiFailure &&
+          canUseLocalSample &&
+          previewStory &&
+          previewEpisode?.text
+        ) {
           setState({
             kind: "ready",
-            title: currentEpisode.title,
-            body: currentEpisode.text,
+            storyTitle: previewStory.title,
+            title: previewEpisode.title,
+            body: previewEpisode.text,
             source: "local-sample",
           });
-        } else {
-          setState({
-            kind: "unavailable",
-            message:
-              "Unable to load this episode. Please try again later.",
-          });
+
+          return;
         }
+
+        setState({
+          kind: "unavailable",
+          message:
+            "Unable to load this episode. Please check your connection and try again.",
+        });
       }
     }
 
@@ -261,11 +322,12 @@ export default function StoryEpisodeReaderScreen() {
       active = false;
     };
   }, [
-    storyId,
-    episodeId,
-    episode?.number,
-    story?.language,
-    canReadLocalSample,
+    storySlug,
+    episodeKey,
+    episodeNumber,
+    language,
+    previewEpisode,
+    previewStory,
   ]);
 
   if (state.kind === "loading") {
@@ -287,25 +349,16 @@ export default function StoryEpisodeReaderScreen() {
     );
   }
 
-  if (!story || !episode) {
-    return (
-      <ReaderStatus
-        title="Story Not Found"
-        message="This story is no longer available."
-      />
-    );
-  }
-
   const pages = paginateEpisode(state.body);
 
   return (
     <StoryVerseReader
-      storyId={story.id}
-      episodeId={episode.id}
-      storyTitle={story.title}
+      storyId={storySlug}
+      episodeId={episodeKey}
+      storyTitle={state.storyTitle}
       episodeTitle={state.title}
       pages={pages}
-      isSample={episode.availability === "sample"}
+      isSample={state.source === "local-sample"}
     />
   );
 }

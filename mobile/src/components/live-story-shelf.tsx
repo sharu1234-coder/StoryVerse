@@ -145,6 +145,7 @@ export default function LiveStoryShelf() {
                 pathname: "/story/[id]",
                 params: {
                   id: story.slug,
+                  source: "live",
                 },
               })
             }

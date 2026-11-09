@@ -10,6 +10,7 @@ import {
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 
+import LiveStoryDetails from "../../components/live-story-details";
 import { getStoryById } from "../../features/stories/catalog";
 import type {
   StoryEpisode,
@@ -116,8 +117,18 @@ function EpisodeRow({ episode, storyId }: { episode: StoryEpisode; storyId: stri
 }
 
 export default function StoryDetailsScreen() {
-  const { id } = useLocalSearchParams<{ id: string }>();
-  const story = getStoryById(id);
+  const { id, source } = useLocalSearchParams<{
+    id: string;
+    source?: string;
+  }>();
+
+  const storySlug = typeof id === "string" ? id : "";
+
+  if (source === "live") {
+    return <LiveStoryDetails slug={storySlug} language="en" />;
+  }
+
+  const story = getStoryById(storySlug);
 
   if (!story) {
     return (
