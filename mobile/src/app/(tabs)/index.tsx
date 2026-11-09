@@ -15,6 +15,7 @@ import {
 import { LinearGradient } from "expo-linear-gradient";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { SymbolView } from "expo-symbols";
+import LiveStoryShelf from "../../components/live-story-shelf";
 
 const COLORS = {
   background: "#090B12",
@@ -287,6 +288,8 @@ export default function HomeScreen() {
             </View>
           </LinearGradient>
         </Pressable>
+
+        <LiveStoryShelf />
 
         {/* GENRES */}
 
