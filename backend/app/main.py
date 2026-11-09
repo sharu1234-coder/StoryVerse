@@ -1,6 +1,7 @@
 from fastapi import FastAPI
 
 from app.api.v1.health import router as health_router
+from app.api.v1.stories import router as stories_router
 from app.core.config import get_settings
 
 
@@ -17,6 +18,11 @@ def create_app() -> FastAPI:
 
     application.include_router(
         health_router,
+        prefix=settings.api_prefix,
+    )
+
+    application.include_router(
+        stories_router,
         prefix=settings.api_prefix,
     )
 
