@@ -56,25 +56,25 @@ const GENRES = [
 
 const STORIES: Story[] = [
   {
-    id: "last-monsoon",
+    id: "the-last-monsoon",
     title: "THE LAST\nMONSOON",
     subtitle: "Some promises survive every storm.",
     genre: "Romance",
-    episodes: 15,
+    episodes: 12,
     duration: "4h 30m",
     colors: ["#655371", "#29344E", "#111724"],
   },
   {
-    id: "forgotten-kingdom",
+    id: "the-forgotten-kingdom",
     title: "THE FORGOTTEN\nKINGDOM",
     subtitle: "A throne buried beneath centuries of secrets.",
     genre: "Fantasy",
-    episodes: 16,
+    episodes: 12,
     duration: "5h 10m",
     colors: ["#71502D", "#332C2A", "#111923"],
   },
   {
-    id: "midnight-call",
+    id: "the-midnight-call",
     title: "THE MIDNIGHT\nCALL",
     subtitle: "Every midnight, someone disappears.",
     genre: "Thriller",
@@ -87,7 +87,7 @@ const STORIES: Story[] = [
     title: "ROOM\n404",
     subtitle: "Some doors were never meant to open.",
     genre: "Horror",
-    episodes: 14,
+    episodes: 12,
     duration: "3h 45m",
     colors: ["#68343C", "#301D30", "#11121A"],
   },
@@ -455,7 +455,7 @@ export default function HomeScreen() {
                   {selectedStory.duration}
                 </Text>
 
-                {selectedStory.id === "last-monsoon" ? (
+                {selectedStory.id === "the-last-monsoon" ? (
                   <View style={{ width: "100%", marginTop: 12, gap: 12 }}>
                     <View
                       style={{

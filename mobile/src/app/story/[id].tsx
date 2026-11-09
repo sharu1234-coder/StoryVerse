@@ -31,9 +31,43 @@ function goBack() {
   }
 }
 
-function EpisodeRow({ episode }: { episode: StoryEpisode }) {
+function EpisodeRow({ episode, storyId }: { episode: StoryEpisode; storyId: string }) {
+  const canReadEpisode =
+    episode.access === "free" &&
+    (episode.availability === "sample" ||
+      episode.availability === "ready") &&
+    Boolean(episode.text?.trim());
+
+  const statusLabel =
+    episode.availability === "sample"
+      ? "SAMPLE AVAILABLE"
+      : episode.availability === "ready"
+        ? "READY"
+        : "COMING SOON";
+
   return (
-    <View style={styles.episodeRow}>
+    <Pressable
+      accessibilityRole={canReadEpisode ? "button" : undefined}
+      accessibilityLabel={
+        canReadEpisode
+          ? `Read sample: ${episode.title}`
+          : undefined
+      }
+      disabled={!canReadEpisode}
+      onPress={
+        canReadEpisode
+          ? () =>
+              router.push({
+                pathname: "/reader/[storyId]/[episodeId]",
+                params: {
+                  storyId,
+                  episodeId: episode.id,
+                },
+              })
+          : undefined
+      }
+      style={styles.episodeRow}
+    >
       <View style={styles.episodeNumber}>
         <Text style={styles.episodeNumberText}>
           {String(episode.number).padStart(2, "0")}
@@ -51,21 +85,33 @@ function EpisodeRow({ episode }: { episode: StoryEpisode }) {
 
         <View style={styles.episodeBadges}>
           <Text style={styles.plannedBadge}>
-            PLANNED
+            {statusLabel}
           </Text>
 
-          <Text style={styles.accessBadge}>
-            {episode.access === "free" ? "FREE" : "PREMIUM"}
-          </Text>
+          {canReadEpisode && (
+            <Text style={styles.accessBadge}>
+              {episode.availability === "sample" ? "FREE SAMPLE" : "FREE"}
+            </Text>
+          )}
+
+          {episode.availability === "ready" && (
+            <Text style={styles.accessBadge}>
+              {episode.access === "free" ? "FREE" : "PREMIUM"}
+            </Text>
+          )}
         </View>
       </View>
 
       <Ionicons
-        name="time-outline"
+        name={
+          canReadEpisode
+            ? "chevron-forward-outline"
+            : "time-outline"
+        }
         size={20}
-        color="#87859D"
+        color={canReadEpisode ? "#D7B3FF" : "#87859D"}
       />
-    </View>
+    </Pressable>
   );
 }
 
@@ -212,9 +258,9 @@ export default function StoryDetailsScreen() {
             />
 
             <Text style={styles.productionNoticeText}>
-              This novel is in editorial development.
-              Reading text and audiobook narration are
-              not available yet.
+              {story.id === "the-last-monsoon"
+                ? "Episode 1 includes a reading sample and an audiobook demonstration. The full novel is still in editorial development."
+                : "This novel is in editorial development. Reading and audiobook episodes are not published yet."}
             </Text>
           </View>
 
@@ -324,6 +370,7 @@ export default function StoryDetailsScreen() {
             <EpisodeRow
               key={episode.id}
               episode={episode}
+              storyId={story.id}
             />
           ))}
         </View>
