@@ -1,6 +1,6 @@
 import pytest
 from fastapi.testclient import TestClient
-from sqlalchemy import create_engine
+from sqlalchemy import create_engine, select
 from sqlalchemy.orm import sessionmaker
 from sqlalchemy.pool import StaticPool
 
@@ -9,6 +9,7 @@ from app.main import app
 from app.models import (
     Base,
     Episode,
+    EpisodeTranslation,
     Genre,
     Language,
     Story,
@@ -126,6 +127,27 @@ def client():
                     is_free=True,
                 ),
             ]
+        )
+
+        db.flush()
+
+        first_episode = db.scalar(
+            select(Episode).where(
+                Episode.story_id == published.id,
+                Episode.episode_number == 1,
+            )
+        )
+
+        assert first_episode is not None
+
+        db.add(
+            EpisodeTranslation(
+                episode_id=first_episode.id,
+                language_code="en",
+                title="Episode One",
+                body_text="A rainy beginning.",
+                status="published",
+            )
         )
 
         db.commit()
