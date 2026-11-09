@@ -32,8 +32,33 @@ function goBack() {
 }
 
 function EpisodeRow({ episode }: { episode: StoryEpisode }) {
+  const canReadSample =
+    episode.availability === "sample" &&
+    Boolean(episode.text?.trim());
+
+  const statusLabel =
+    episode.availability === "sample"
+      ? "SAMPLE AVAILABLE"
+      : episode.availability === "ready"
+        ? "READY"
+        : "COMING SOON";
+
   return (
-    <View style={styles.episodeRow}>
+    <Pressable
+      accessibilityRole={canReadSample ? "button" : undefined}
+      accessibilityLabel={
+        canReadSample
+          ? `Read sample: ${episode.title}`
+          : undefined
+      }
+      disabled={!canReadSample}
+      onPress={
+        canReadSample
+          ? () => router.push("/reader/demo")
+          : undefined
+      }
+      style={styles.episodeRow}
+    >
       <View style={styles.episodeNumber}>
         <Text style={styles.episodeNumberText}>
           {String(episode.number).padStart(2, "0")}
@@ -51,21 +76,33 @@ function EpisodeRow({ episode }: { episode: StoryEpisode }) {
 
         <View style={styles.episodeBadges}>
           <Text style={styles.plannedBadge}>
-            PLANNED
+            {statusLabel}
           </Text>
 
-          <Text style={styles.accessBadge}>
-            {episode.access === "free" ? "FREE" : "PREMIUM"}
-          </Text>
+          {canReadSample && (
+            <Text style={styles.accessBadge}>
+              FREE SAMPLE
+            </Text>
+          )}
+
+          {episode.availability === "ready" && (
+            <Text style={styles.accessBadge}>
+              {episode.access === "free" ? "FREE" : "PREMIUM"}
+            </Text>
+          )}
         </View>
       </View>
 
       <Ionicons
-        name="time-outline"
+        name={
+          canReadSample
+            ? "chevron-forward-outline"
+            : "time-outline"
+        }
         size={20}
-        color="#87859D"
+        color={canReadSample ? "#D7B3FF" : "#87859D"}
       />
-    </View>
+    </Pressable>
   );
 }
 
@@ -212,9 +249,9 @@ export default function StoryDetailsScreen() {
             />
 
             <Text style={styles.productionNoticeText}>
-              This novel is in editorial development.
-              Reading text and audiobook narration are
-              not available yet.
+              {story.id === "the-last-monsoon"
+                ? "Episode 1 includes a reading sample and an audiobook demonstration. The full novel is still in editorial development."
+                : "This novel is in editorial development. Reading and audiobook episodes are not published yet."}
             </Text>
           </View>
 
