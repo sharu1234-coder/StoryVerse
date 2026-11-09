@@ -8,6 +8,7 @@ from sqlalchemy.orm import Session
 from app.db.session import get_db_session
 from app.models.content import (
     Episode,
+    EpisodeAudio,
     EpisodeTranslation,
     Genre,
     Language,
@@ -16,6 +17,7 @@ from app.models.content import (
     StoryTranslation,
 )
 from app.schemas.stories import (
+    EpisodeAudioMetadata,
     EpisodePage,
     EpisodeReading,
     EpisodeSummary,
@@ -331,4 +333,66 @@ def read_episode(
     return EpisodeReading(
         **summary.model_dump(),
         body_text=translation.body_text,
+    )
+
+
+@router.get(
+    "/{slug}/episodes/{episode_number}/audio",
+    response_model=EpisodeAudioMetadata,
+)
+def get_episode_audio(
+    slug: str,
+    episode_number: Annotated[int, Path(ge=1)],
+    language: LanguageQuery = "en",
+    db: Session = Depends(get_db_session),
+) -> EpisodeAudioMetadata:
+    story = _public_story_for_language(
+        db,
+        slug,
+        language,
+    )
+
+    row = db.execute(
+        _visible_episodes_query(
+            story.id,
+            language,
+        ).where(Episode.episode_number == episode_number)
+    ).one_or_none()
+
+    if row is None:
+        raise HTTPException(
+            status_code=404,
+            detail="Episode not found",
+        )
+
+    episode, translation = row
+
+    if not episode.is_free:
+        raise HTTPException(
+            status_code=403,
+            detail="Premium audiobook requires access",
+        )
+
+    audio = db.scalar(
+        select(EpisodeAudio).where(
+            EpisodeAudio.episode_id == episode.id,
+            EpisodeAudio.language_code == language,
+            EpisodeAudio.status == "published",
+        )
+    )
+
+    if audio is None:
+        raise HTTPException(
+            status_code=404,
+            detail="Audiobook not available",
+        )
+
+    return EpisodeAudioMetadata(
+        story_slug=story.slug,
+        episode_number=episode.episode_number,
+        language_code=language,
+        title=translation.title,
+        duration_ms=audio.duration_ms,
+        mime_type=audio.mime_type,
+        narrator_name=audio.narrator_name,
     )

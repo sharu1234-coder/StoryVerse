@@ -44,3 +44,13 @@ class EpisodePage(BaseModel):
 
 class EpisodeReading(EpisodeSummary):
     body_text: str
+
+
+class EpisodeAudioMetadata(BaseModel):
+    story_slug: str
+    episode_number: int
+    language_code: str
+    title: str
+    duration_ms: int
+    mime_type: str
+    narrator_name: str | None
