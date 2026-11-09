@@ -31,9 +31,11 @@ function goBack() {
   }
 }
 
-function EpisodeRow({ episode }: { episode: StoryEpisode }) {
-  const canReadSample =
-    episode.availability === "sample" &&
+function EpisodeRow({ episode, storyId }: { episode: StoryEpisode; storyId: string }) {
+  const canReadEpisode =
+    episode.access === "free" &&
+    (episode.availability === "sample" ||
+      episode.availability === "ready") &&
     Boolean(episode.text?.trim());
 
   const statusLabel =
@@ -45,16 +47,23 @@ function EpisodeRow({ episode }: { episode: StoryEpisode }) {
 
   return (
     <Pressable
-      accessibilityRole={canReadSample ? "button" : undefined}
+      accessibilityRole={canReadEpisode ? "button" : undefined}
       accessibilityLabel={
-        canReadSample
+        canReadEpisode
           ? `Read sample: ${episode.title}`
           : undefined
       }
-      disabled={!canReadSample}
+      disabled={!canReadEpisode}
       onPress={
-        canReadSample
-          ? () => router.push("/reader/demo")
+        canReadEpisode
+          ? () =>
+              router.push({
+                pathname: "/reader/[storyId]/[episodeId]",
+                params: {
+                  storyId,
+                  episodeId: episode.id,
+                },
+              })
           : undefined
       }
       style={styles.episodeRow}
@@ -79,9 +88,9 @@ function EpisodeRow({ episode }: { episode: StoryEpisode }) {
             {statusLabel}
           </Text>
 
-          {canReadSample && (
+          {canReadEpisode && (
             <Text style={styles.accessBadge}>
-              FREE SAMPLE
+              {episode.availability === "sample" ? "FREE SAMPLE" : "FREE"}
             </Text>
           )}
 
@@ -95,12 +104,12 @@ function EpisodeRow({ episode }: { episode: StoryEpisode }) {
 
       <Ionicons
         name={
-          canReadSample
+          canReadEpisode
             ? "chevron-forward-outline"
             : "time-outline"
         }
         size={20}
-        color={canReadSample ? "#D7B3FF" : "#87859D"}
+        color={canReadEpisode ? "#D7B3FF" : "#87859D"}
       />
     </Pressable>
   );
@@ -361,6 +370,7 @@ export default function StoryDetailsScreen() {
             <EpisodeRow
               key={episode.id}
               episode={episode}
+              storyId={story.id}
             />
           ))}
         </View>
